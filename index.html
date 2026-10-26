@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d1630">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="クリスマス大作戦">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<meta property="og:title" content="ジップ＆キャンディのクリスマス大作戦！">
+<meta property="og:description" content="えんとつ町へプレゼントを届けよう！">
+<meta property="og:image" content="img/top.jpg">
+<title>ジップ＆キャンディのクリスマス大作戦！（デモ版）</title>
+<meta name="description" content="えんとつ町へプレゼントを届けよう！ クリスマスストーリーゲームのデモ版">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #fbf3e2;
+    --paper-edge: #d9bf8c;
+    --ink: #4a2f1c;
+    --ink-soft: #7a5a3e;
+    --red: #c8362f;
+    --gold: #f2b63c;
+    --night: #0d1630;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--night); color: var(--ink); overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Hiragino Sans', sans-serif; overflow: hidden; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* 画面はスマホ縦長の枠に収める（PC では中央に表示） */
+  #app { position: relative; height: 100dvh; width: min(100vw, calc(100dvh * 0.5625)); margin: 0 auto; overflow: hidden; background: #000; }
+  .screen { position: absolute; inset: 0; display: none; }
+  .screen.is-active { display: block; animation: fadein .45s ease; }
+  @keyframes fadein { from { opacity: 0 } to { opacity: 1 } }
+  .bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+  .demo-badge { position: absolute; z-index: 50; top: max(8px, env(safe-area-inset-top)); left: 8px; background: rgba(0,0,0,.5); color: #fff;
+    font-size: 11px; padding: 3px 8px; border-radius: 999px; pointer-events: none; }
+
+  /* ① トップ: 画像に描かれた「はじめる」の上に透明ボタンを重ねる */
+  #btn-start { position: absolute; left: 28.5%; top: 80.3%; width: 44%; height: 10%; background: transparent; border: none; border-radius: 40px; }
+  #btn-start:active { background: rgba(255,255,255,.15); }
+  .pulse { position: absolute; left: 28.5%; top: 80.3%; width: 44%; height: 10%; border-radius: 40px; pointer-events: none;
+    box-shadow: 0 0 0 0 rgba(255,230,150,.7); animation: pulse 2s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,230,150,.6) } 70% { box-shadow: 0 0 0 18px rgba(255,230,150,0) } 100% { box-shadow: 0 0 0 0 rgba(255,230,150,0) } }
+
+  /* ② オープニング */
+  #opening .bg { filter: brightness(.35) blur(2px); transform: scale(1.05); }
+  .op-text { position: absolute; left: 8%; right: 8%; top: 50%; transform: translateY(-50%); color: #fff; text-align: center;
+    font-size: clamp(17px, 4.6vw, 22px); line-height: 2; text-shadow: 0 2px 8px rgba(0,0,0,.8); white-space: pre-line; transition: opacity .5s; }
+  .op-hint { position: absolute; bottom: max(28px, env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; color: rgba(255,255,255,.75); font-size: 13px; animation: blink 1.6s infinite; }
+  @keyframes blink { 50% { opacity: .35 } }
+  #btn-skip { position: absolute; z-index: 5; top: max(12px, env(safe-area-inset-top)); right: 12px; background: rgba(255,255,255,.18); color: #fff;
+    border: 1px solid rgba(255,255,255,.5); border-radius: 999px; padding: 6px 14px; font-size: 14px; }
+
+  #op-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; display: none; }
+  #opening.is-video #op-video { display: block; }
+  #opening.is-video .op-text, #opening.is-video .op-hint, #opening.is-video .bg { display: none; }
+  #btn-sound { position: absolute; z-index: 5; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: none;
+    background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.5); border-radius: 999px; padding: 8px 18px; font-size: 14px; }
+  #btn-sound.is-show { display: block; }
+
+  .install { position: absolute; z-index: 30; left: 4%; right: 4%; bottom: max(8px, env(safe-area-inset-bottom)); display: none;
+    background: rgba(251,243,226,.96); border: 2px solid var(--paper-edge); border-radius: 14px; padding: 8px 34px 8px 12px; font-size: 12px; line-height: 1.6; }
+  .install.is-show { display: block; animation: fadein .4s ease; }
+  .install b { color: var(--red); }
+  .install button { position: absolute; top: 4px; right: 6px; background: none; border: none; font-size: 18px; color: var(--ink-soft); }
+  .install .add { position: static; margin-top: 4px; background: var(--red); color: #fff; border-radius: 999px; padding: 4px 14px; font-size: 12px; }
+
+  /* ③ マップ */
+  .spot { position: absolute; width: 19%; aspect-ratio: 1; transform: translate(-50%, -78%); border: none; padding: 0; background: transparent; }
+  .spot-icon { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; border: 3px solid var(--gold); box-shadow: 0 0 18px rgba(255,210,120,.9);
+    background: var(--paper); display: flex; align-items: center; justify-content: center; font-size: 26px; animation: bob 2.4s ease-in-out infinite; }
+  .spot-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .spot.is-locked .spot-icon { border-color: #b9b2a6; box-shadow: none; filter: grayscale(.6); opacity: .85; animation: none; }
+  .spot.is-done .spot-icon { border-color: #7fd17f; }
+  .spot-name { position: absolute; left: 50%; bottom: -24px; transform: translateX(-50%); white-space: nowrap; background: var(--paper); color: var(--ink);
+    border: 1px solid var(--paper-edge); border-radius: 999px; font-size: 11px; padding: 1px 8px; }
+  .spot.is-done .spot-name::before { content: '✓ '; color: #3a9a3a; }
+  @keyframes bob { 50% { transform: translateY(-5px) } }
+  .map-head { position: absolute; top: max(34px, calc(env(safe-area-inset-top) + 26px)); left: 50%; transform: translateX(-50%); width: 90%;
+    background: rgba(251,243,226,.94); border: 2px solid var(--paper-edge); border-radius: 14px; padding: 6px 10px; text-align: center; font-size: 13px; }
+  .trees { display: flex; justify-content: center; gap: 4px; margin-top: 2px; }
+  .tree { width: 22px; height: 22px; }
+  .tree path { fill: #b7b0a4; }
+  .tree.is-lit path { fill: var(--gold); filter: drop-shadow(0 0 4px rgba(255,200,80,.9)); }
+  .map-foot { position: absolute; bottom: max(10px, env(safe-area-inset-bottom)); right: 10px; display: flex; gap: 6px; }
+  .chip-btn { background: rgba(251,243,226,.94); border: 1px solid var(--paper-edge); border-radius: 999px; padding: 5px 12px; font-size: 12px; }
+
+  /* 共通: 紙のパネル・ふきだし */
+  .paper { background: var(--paper); border: 2px solid var(--paper-edge); border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+  .namebar { display: inline-block; background: #7a2a22; color: #fff; font-size: 13px; padding: 2px 14px; border-radius: 6px; margin-bottom: 6px; }
+  .bubble { position: relative; background: var(--paper); border: 2px solid var(--paper-edge); border-radius: 18px; padding: 10px 14px; font-size: clamp(13px, 3.6vw, 15px); line-height: 1.7; }
+
+  /* ④ プレゼント選択 */
+  #select { background: linear-gradient(#2a1b14, #120b08); }
+  .sel-top { position: absolute; left: 0; right: 0; top: 0; height: 43%; overflow: hidden; }
+  .sel-top .portrait-bg { position: absolute; inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px); object-fit: cover; filter: blur(14px) brightness(.6); }
+  .sel-top .portrait { position: absolute; left: 0; top: 0; height: 100%; width: 52%; object-fit: cover; -webkit-mask-image: linear-gradient(90deg, #000 75%, transparent); mask-image: linear-gradient(90deg, #000 75%, transparent); }
+  .sel-top .bubble { position: absolute; right: 4%; top: 18%; width: 54%; }
+  .sel-panel { position: absolute; left: 4%; right: 4%; top: 40%; padding: 10px 10px 12px; text-align: center; }
+  .sel-panel h2 { margin: 2px 0 8px; font-size: clamp(16px, 4.6vw, 19px); }
+  .items { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .item { background: #fffaf0; border: 2px solid var(--paper-edge); border-radius: 10px; padding: 6px 4px 8px; transition: transform .15s; }
+  .item:active { transform: scale(.96); }
+  .item img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
+  .item b { display: block; font-size: 14px; margin-top: 4px; }
+  .item small { display: block; font-size: 10.5px; color: var(--ink-soft); line-height: 1.4; margin-top: 2px; }
+  .item.is-wrong { animation: shake .4s; opacity: .55; }
+  @keyframes shake { 25% { transform: translateX(-5px) } 75% { transform: translateX(5px) } }
+  .sel-guide { position: absolute; left: 4%; right: 4%; bottom: max(56px, calc(env(safe-area-inset-bottom) + 48px)); display: flex; align-items: flex-end; gap: 8px; }
+  .sel-guide img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--paper-edge); flex-shrink: 0; }
+  .sel-guide .bubble { flex: 1; }
+  #btn-back { position: absolute; left: 4%; bottom: max(12px, env(safe-area-inset-bottom)); }
+
+  /* ⑤ 渡したとき */
+  #result .bg { object-position: center top; }
+  #result .bubble.top { position: absolute; left: 6%; right: 6%; top: max(36px, calc(env(safe-area-inset-top) + 28px)); }
+  #result .bubble.mid { position: absolute; right: 6%; top: 55%; max-width: 62%; }
+  .res-panel { position: absolute; left: 4%; right: 4%; bottom: max(14px, env(safe-area-inset-bottom)); padding: 10px 12px 12px; text-align: center; }
+  .res-panel p { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
+  .res-panel small { display: block; font-size: 11px; color: var(--ink-soft); margin: 4px 0 8px; }
+  .res-panel .tree { width: 34px; height: 34px; }
+  .res-panel .tree.is-new path { animation: lit 1.2s ease; }
+  @keyframes lit { 0% { fill: #b7b0a4 } 60% { fill: #fff3b0 } 100% { fill: var(--gold) } }
+  .primary { background: var(--red); color: #fff; border: none; border-radius: 999px; padding: 9px 26px; font-size: 15px; box-shadow: 0 3px 0 #8e211c; }
+
+  /* 準備中・完成 */
+  .modal { position: absolute; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; z-index: 20; }
+  .modal.is-open { display: flex; }
+  .modal .paper { width: 82%; padding: 18px 16px; text-align: center; font-size: 14px; line-height: 1.8; }
+  #complete .msg { position: absolute; left: 6%; right: 6%; top: 50%; transform: translateY(-50%); text-align: center; padding: 20px 14px; }
+  #complete .msg h2 { margin: 0 0 6px; color: var(--red); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="demo-badge">デモ版</div>
+
+  <!-- ① トップ -->
+  <section class="screen is-active" id="top">
+    <img class="bg" src="img/top.jpg" alt="ジップ＆キャンディのクリスマス大作戦！ えんとつ町へプレゼントを届けよう！">
+    <span class="pulse"></span>
+    <button id="btn-start" aria-label="はじめる"></button>
+    <div class="install" id="install">
+      <button id="btn-install-close" aria-label="閉じる">×</button>
+      <div id="install-text"></div>
+    </div>
+  </section>
+
+  <!-- ② オープニング（動画。スキップでマップへ） -->
+  <section class="screen" id="opening">
+    <img class="bg" src="img/top.jpg" alt="">
+    <!-- 本番のオープニング動画は video/opening.mp4 に置く。無いときは下の文字のスライドで代用 -->
+    <video id="op-video" playsinline webkit-playsinline preload="none"></video>
+    <button id="btn-skip">スキップ ▶▶</button>
+    <button id="btn-sound">🔊 音を出す</button>
+    <div class="op-text" id="op-text"></div>
+    <div class="op-hint">タップでつぎへ</div>
+  </section>
+
+  <!-- ③ マップ -->
+  <section class="screen" id="map">
+    <img class="bg" src="img/map.jpg" alt="雪降る魔法のクリスマス村">
+    <div class="map-head paper">
+      <div>だれにプレゼントを とどける？</div>
+      <div class="trees" id="map-trees"></div>
+    </div>
+    <div id="spots"></div>
+    <div class="map-foot">
+      <button class="chip-btn" id="btn-to-top">トップへ</button>
+      <button class="chip-btn" id="btn-reset">さいしょから</button>
+    </div>
+  </section>
+
+  <!-- ④ プレゼント選択 -->
+  <section class="screen" id="select">
+    <div class="sel-top">
+      <img class="portrait-bg" id="sel-portrait-bg" alt="">
+      <img class="portrait" id="sel-portrait" alt="">
+      <div class="bubble"><span class="namebar" id="sel-name"></span><div id="sel-line"></div></div>
+    </div>
+    <div class="sel-panel paper">
+      <h2>どのプレゼントを わたす？</h2>
+      <div class="items" id="sel-items"></div>
+    </div>
+    <div class="sel-guide">
+      <img src="img/zip.jpg" alt="ジップ">
+      <div class="bubble" id="sel-hint"></div>
+    </div>
+    <button class="chip-btn" id="btn-back">＜ もどる</button>
+  </section>
+
+  <!-- ⑤ 渡したとき -->
+  <section class="screen" id="result">
+    <img class="bg" id="res-img" alt="">
+    <div class="bubble top"><span class="namebar" id="res-name"></span><div id="res-line1"></div></div>
+    <div class="bubble mid" id="res-line2"></div>
+    <div class="res-panel paper">
+      <p id="res-msg"></p>
+      <div class="trees" id="res-trees"></div>
+      <small>みんなにプレゼントを とどけて クリスマスツリーを かんせいさせよう！</small>
+      <button class="primary" id="btn-res-next">マップへ もどる</button>
+    </div>
+  </section>
+
+  <!-- ⑥ 5人に届けたら -->
+  <section class="screen" id="complete">
+    <img class="bg" src="img/map.jpg" alt="">
+    <div class="msg paper">
+      <h2>🎄 クリスマスツリー かんせい！</h2>
+      <div>えんとつ町のみんなに プレゼントを とどけたよ。<br>メリークリスマス！</div>
+      <div class="trees" id="cmp-trees" style="margin:10px 0 12px"></div>
+      <button class="primary" id="btn-cmp-top">トップへ もどる</button>
+    </div>
+  </section>
+
+  <div class="modal" id="modal-soon">
+    <div class="paper">
+      <div style="font-size:30px">🎁</div>
+      <div id="soon-text"></div>
+      <button class="primary" style="margin-top:10px" id="btn-soon-close">とじる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── 物語データ（キャラクターを足すときはここに 1 件ずつ追加） ──
+  // map: マップ上の台座の位置（画像に対する %）。ready=false はデモでは「準備中」
+  const CHARACTERS = [
+    {
+      id: 'rubicchi', name: 'ルビッチ', ready: true, icon: 'img/rubicchi_ask.jpg', map: { x: 17, y: 18.5 },
+      portrait: 'img/rubicchi_ask.jpg', happy: 'img/rubicchi_happy.jpg',
+      line: '今日はとっても寒いね…。\nわたし、もう少し夜の町を歩きたいんだ。\nどんなプレゼントがうれしいかな？',
+      hint: 'どれが いいかな？\nルビッチのことを かんがえて えらんでみよう！',
+      items: [
+        { id: 'scarf', name: 'マフラー', img: 'img/item_scarf.jpg', desc: 'あたたかくて\nやさしい手ざわり', correct: true },
+        { id: 'lantern', name: 'ランタン', img: 'img/item_lantern.jpg', desc: '夜の町を\n照らしてくれる' },
+        { id: 'gloves', name: '手袋', img: 'img/item_gloves.jpg', desc: '寒い夜も\nへっちゃら！' },
+      ],
+      wrong: 'うーん…それも うれしいけど、\nいまは もっと ほしいものが あるかも。',
+      thanks1: 'わあ…！ ありがとう！\nこのマフラー、とってもあたたかい！\nこれで、もっと夜の町の景色を楽しめるよ。',
+      thanks2: '大切にするね！\nメリークリスマス！',
+    },
+    { id: 'c2', name: '???', ready: false, map: { x: 80, y: 29.6 } },
+    { id: 'c3', name: '???', ready: false, map: { x: 19, y: 43.4 } },
+    { id: 'c4', name: '???', ready: false, map: { x: 85, y: 50 } },
+    { id: 'c5', name: '???', ready: false, map: { x: 82, y: 76.6 } },
+  ];
+
+  const OPENING = [
+    'クリスマスイブの夜。\nえんとつ町には、今年も雪がふりはじめました。',
+    'えんとつのけむりで、\n町のみんなは 星空を見たことがありません。',
+    '「みんなに プレゼントを とどけて、\nクリスマスツリーを 光らせよう！」',
+    'ジップとキャンディの\nクリスマス大作戦が、いま はじまります！',
+  ];
+
+  // ── 進み具合（届けた人）。端末のブラウザにだけ保存 ──
+  const LS_KEY = 'zipcandy_xmas_done';
+  let done = [];
+  try { done = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch (_) {}
+  const save = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(done)); } catch (_) {} };
+
+  const $ = (id) => document.getElementById(id);
+  function show(id) {
+    document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('is-active', s.id === id));
+  }
+  const TREE_SVG = '<svg class="tree" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2 3.5 3.8.5-2.8 2.4h2.5L14 12h3l-4 5h4l-2 2h-2v4h-2v-4H9l-2-2h4l-4-5h3L6.5 7.4H9L6.2 5l3.8-.5z"/></svg>';
+  function renderTrees(el, newIdx) {
+    el.innerHTML = CHARACTERS.map((_, i) => TREE_SVG).join('');
+    el.querySelectorAll('.tree').forEach((t, i) => {
+      if (i < done.length) t.classList.add('is-lit');
+      if (i === newIdx) t.classList.add('is-new');
+    });
+  }
+
+  // ── ① → ② オープニング ──
+  // video/opening.mp4 があれば動画を流す（最後まで見たら／スキップでマップへ）。
+  // 動画が無い・読めないときは文字のスライドで代用する。
+  const OPENING_VIDEO = 'video/opening.mp4';
+  const video = $('op-video');
+  let opMode = null; // 'video' | 'slides'
+  let opIndex = 0;
+
+  function startOpening() {
+    show('opening');
+    $('btn-sound').classList.remove('is-show');
+    opMode = 'video';
+    $('opening').classList.add('is-video');
+    video.muted = false;
+    video.src = OPENING_VIDEO;
+    // 「はじめる」のタップ中に play() を呼ぶので、スマホでも音ありで再生できる
+    const p = video.play();
+    if (p && p.catch) {
+      p.catch((err) => {
+        if (opMode !== 'video') return;
+        if (err && err.name === 'NotAllowedError') {
+          // 音ありの自動再生を止められた端末 → 消音で流して「音を出す」ボタンを出す
+          video.muted = true;
+          video.play().then(() => $('btn-sound').classList.add('is-show')).catch(startSlides);
+        } else {
+          startSlides();
+        }
+      });
+    }
+  }
+  video.addEventListener('error', () => { if (opMode === 'video') startSlides(); });
+  video.addEventListener('ended', () => { if (opMode === 'video') leaveOpening(); });
+  $('btn-sound').addEventListener('click', (e) => {
+    e.stopPropagation();
+    video.muted = false;
+    $('btn-sound').classList.remove('is-show');
+  });
+
+  function startSlides() {
+    stopVideo();
+    opMode = 'slides';
+    $('opening').classList.remove('is-video');
+    opIndex = 0;
+    showOpLine();
+  }
+  function stopVideo() {
+    try { video.pause(); } catch (_) {}
+    video.removeAttribute('src');
+    try { video.load(); } catch (_) {}
+  }
+  function showOpLine() {
+    const el = $('op-text');
+    el.style.opacity = 0;
+    setTimeout(() => { el.textContent = OPENING[opIndex]; el.style.opacity = 1; }, 150);
+  }
+  $('btn-start').addEventListener('click', startOpening);
+  $('opening').addEventListener('click', (e) => {
+    if (opMode !== 'slides' || e.target.closest('button')) return;
+    opIndex++;
+    if (opIndex >= OPENING.length) leaveOpening(); else showOpLine();
+  });
+  function leaveOpening() {
+    opMode = null;
+    stopVideo();
+    openMap();
+  }
+  $('btn-skip').addEventListener('click', (e) => { e.stopPropagation(); leaveOpening(); });
+
+  // ── ③ マップ ──
+  function openMap() {
+    if (done.length >= CHARACTERS.length) { openComplete(); return; }
+    $('spots').innerHTML = CHARACTERS.map((c) => {
+      const cls = !c.ready ? 'is-locked' : (done.includes(c.id) ? 'is-done' : '');
+      const icon = c.icon ? `<img src="${c.icon}" alt="">` : '🔒';
+      return `<button class="spot ${cls}" data-id="${c.id}" style="left:${c.map.x}%;top:${c.map.y}%" aria-label="${c.name}">
+        <span class="spot-icon">${icon}</span><span class="spot-name">${c.ready ? c.name : 'じゅんびちゅう'}</span></button>`;
+    }).join('');
+    renderTrees($('map-trees'));
+    show('map');
+  }
+  $('spots').addEventListener('click', (e) => {
+    const b = e.target.closest('.spot');
+    if (!b) return;
+    const c = CHARACTERS.find((x) => x.id === b.dataset.id);
+    if (!c.ready) { openSoon('この おうちの おはなしは\nじゅんびちゅう です。\nもうすこし まっててね！'); return; }
+    if (done.includes(c.id)) { openSoon(`${c.name}には もう\nプレゼントを とどけたよ！`); return; }
+    openSelect(c);
+  });
+  $('btn-to-top').addEventListener('click', () => show('top'));
+  $('btn-reset').addEventListener('click', () => { done = []; save(); openMap(); });
+
+  // ── ④ プレゼント選択 ──
+  let current = null;
+  function openSelect(c) {
+    current = c;
+    $('sel-portrait').src = c.portrait;
+    $('sel-portrait-bg').src = c.portrait;
+    $('sel-portrait').alt = c.name;
+    $('sel-name').textContent = c.name;
+    $('sel-line').innerText = c.line;
+    $('sel-hint').innerText = c.hint;
+    $('sel-items').innerHTML = c.items.map((it) => `
+      <button class="item" data-id="${it.id}"><img src="${it.img}" alt=""><b>${it.name}</b><small>${it.desc.replace(/\n/g, '<br>')}</small></button>`).join('');
+    show('select');
+  }
+  $('sel-items').addEventListener('click', (e) => {
+    const b = e.target.closest('.item');
+    if (!b) return;
+    const it = current.items.find((x) => x.id === b.dataset.id);
+    if (!it.correct) {
+      b.classList.remove('is-wrong'); void b.offsetWidth; b.classList.add('is-wrong');
+      $('sel-line').innerText = current.wrong;
+      return;
+    }
+    openResult(current);
+  });
+  $('btn-back').addEventListener('click', openMap);
+
+  // ── ⑤ 渡したとき ──
+  function openResult(c) {
+    if (!done.includes(c.id)) done.push(c.id);
+    save();
+    $('res-img').src = c.happy;
+    $('res-name').textContent = c.name;
+    $('res-line1').innerText = c.thanks1;
+    $('res-line2').innerText = c.thanks2;
+    $('res-msg').textContent = `${c.name}にプレゼントを わたしたよ！`;
+    renderTrees($('res-trees'), done.length - 1);
+    $('btn-res-next').textContent = done.length >= CHARACTERS.length ? 'ツリーを 見にいく' : 'マップへ もどる';
+    show('result');
+  }
+  $('btn-res-next').addEventListener('click', openMap);
+
+  // ── ⑥ 完成 ──
+  function openComplete() { renderTrees($('cmp-trees')); show('complete'); }
+  $('btn-cmp-top').addEventListener('click', () => show('top'));
+
+  // ── ホーム画面に追加（スマホでアプリのように全画面で遊べる） ──
+  const INSTALL_LS_KEY = 'zipcandy_install_hint_closed';
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let hintClosed = false;
+  try { hintClosed = localStorage.getItem(INSTALL_LS_KEY) === '1'; } catch (_) {}
+  let deferredPrompt = null;
+  function showInstallHint(html) {
+    if (isStandalone || hintClosed) return;
+    $('install-text').innerHTML = html;
+    $('install').classList.add('is-show');
+  }
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Android（Chrome）: ボタン 1 つでホーム画面に追加できる
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstallHint('<b>ホーム画面に追加</b>すると、アプリのように全画面で遊べます<br><button class="add" id="btn-install-add">ホーム画面に追加</button>');
+  });
+  if (isIOS) {
+    // iPhone（Safari）: 共有ボタンから追加してもらう
+    setTimeout(() => showInstallHint('Safari の <b>共有ボタン（□↑）</b> →「<b>ホーム画面に追加</b>」で、アプリのように全画面で遊べます'), 1200);
+  }
+  $('install').addEventListener('click', async (e) => {
+    if (e.target.id === 'btn-install-add' && deferredPrompt) {
+      deferredPrompt.prompt();
+      try { await deferredPrompt.userChoice; } catch (_) {}
+      deferredPrompt = null;
+      $('install').classList.remove('is-show');
+    }
+  });
+  $('btn-install-close').addEventListener('click', () => {
+    $('install').classList.remove('is-show');
+    try { localStorage.setItem(INSTALL_LS_KEY, '1'); } catch (_) {}
+  });
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  function openSoon(text) { $('soon-text').innerText = text; $('modal-soon').classList.add('is-open'); }
+  $('btn-soon-close').addEventListener('click', () => $('modal-soon').classList.remove('is-open'));
+})();
+</script>
+</body>
+</html>
